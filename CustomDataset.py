@@ -11,7 +11,9 @@ import math
 
 def get_patch(img, coord):
     weight = math.floor(PATCH_SIZE / 2)
-    return img[coord[0]-weight:coord[0]+weight+1, coord[1]-weight:coord[1]+weight+1]
+    patch = img[coord[0]-weight:coord[0]+weight, coord[1]-weight:coord[1]+weight]
+    # print(patch.shape)
+    return patch
 
 class CustomDataset(Dataset):
     def __init__(self, train=True, transform=None):
@@ -29,13 +31,14 @@ class CustomDataset(Dataset):
                 model_img = cv2.imread(TRAIN_MODEL_RES_DIR+'/'+file_name)
                 label_img = cv2.imread(TRAIN_LABEL_DIR+'/'+file_name)
                 for j in range(1024):
-                    x = random.randrange(50, svg_img.shape[0]-50)
-                    y = random.randrange(50, svg_img.shape[1]-50)
+                    x = random.randrange(PATCH_SIZE, svg_img.shape[0]-PATCH_SIZE)
+                    y = random.randrange(PATCH_SIZE, svg_img.shape[1]-PATCH_SIZE)
                     self.svg_patches.append(get_patch(svg_img, (x, y)))
                     self.model_patches.append(get_patch(model_img, (x, y)))
-                    self.labels.append(1 if label_img[x, y, 1] == 255 else 0)
+                    self.labels.append(1 if label_img[x, y, 1] == 255 else -1)
+                    # print(label_img[x, y])
         else:
-            for i in range(90, 100+1):
+            for i in range(91, 100+1):
                 file_num = f'{i}'.zfill(3)
                 file_name = f'{file_num}.png'
 
@@ -43,8 +46,8 @@ class CustomDataset(Dataset):
                 model_img = cv2.imread(TRAIN_MODEL_RES_DIR+'/'+file_name)
                 label_img = cv2.imread(TRAIN_LABEL_DIR+'/'+file_name)
                 for j in range(20):
-                    x = random.randrange(50, svg_img.shape[0]-50)
-                    y = random.randrange(50, svg_img.shape[1]-50)
+                    x = random.randrange(PATCH_SIZE, svg_img.shape[0]-PATCH_SIZE)
+                    y = random.randrange(PATCH_SIZE, svg_img.shape[1]-PATCH_SIZE)
                     self.svg_patches.append(get_patch(svg_img, (x, y)))
                     self.model_patches.append(get_patch(model_img, (x, y)))
                     self.labels.append(1 if label_img[x, y, 1] == 255 else 0)
@@ -73,6 +76,10 @@ class CustomDataset(Dataset):
         label = np.expand_dims(label, 0)
         torch_label = torch.from_numpy(label)
         torch_float_label_data = torch_label.type(torch.LongTensor)
+
+        torch_float_label_data = torch_float_label_data.squeeze(dim=-1)
+        torch_float_svg_data = torch_float_svg_data.reshape(3,PATCH_SIZE,PATCH_SIZE)
+        torch_float_model_data = torch_float_model_data.reshape(3,PATCH_SIZE,PATCH_SIZE)
 
         return torch_float_svg_data, torch_float_model_data, torch_float_label_data
 
